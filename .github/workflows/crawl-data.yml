@@ -1,0 +1,135 @@
+name: 自动采集高考数据
+
+# 触发条件：
+# 1. 每年 6月15日-8月30日 期间，每天北京时间 6:00 自动运行
+# 2. 手动触发（可选省份和年份）
+on:
+  schedule:
+    # UTC 22:00 = 北京时间 06:00（次日）
+    # 6月15日-8月30日每天运行
+    - cron: '0 22 15-30 5 *'   # 6月15-30（UTC月份5=6月前半）
+    - cron: '0 22 * 6 *'       # 7月每天
+    - cron: '0 22 * 7 *'       # 8月每天
+    - cron: '0 22 1-15 5 *'    # 6月1-15
+  workflow_dispatch:
+    inputs:
+      province:
+        description: '目标省份'
+        required: true
+        default: '河北'
+        type: choice
+        options:
+          - '河北'
+          - '北京'
+          - '天津'
+          - '山东'
+          - '河南'
+          - '湖北'
+          - '广东'
+          - '四川'
+          - '江苏'
+          - '浙江'
+          - '湖南'
+          - '辽宁'
+          - '陕西'
+          - '福建'
+          - '安徽'
+      years:
+        description: '采集年份（逗号分隔）'
+        required: true
+        default: '2023,2024,2025'
+      subject_types:
+        description: '科类'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - 'both'
+          - 'physics'
+          - 'history'
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: pip install -e .
+
+      - name: 🗄️ Restore cached database
+        uses: actions/cache@v4
+        with:
+          path: data/gaokao.db
+          key: gaokao-db-${{ github.run_number }}
+          restore-keys: |
+            gaokao-db-
+
+      - name: 🕷️ 采集数据
+        run: |
+          PROVINCE="${{ github.event.inputs.province || '河北' }}"
+          YEARS="${{ github.event.inputs.years || '2023,2024,2025' }}"
+          
+          echo "🎯 采集目标: ${PROVINCE} ${YEARS}"
+          
+          python main.py init-db
+          python main.py crawl --province "${PROVINCE}" --years "${YEARS}"
+        env:
+          PYTHONIOENCODING: utf-8
+
+      - name: 📊 数据统计
+        run: |
+          python -c "
+          from app.data.database import get_connection
+          with get_connection() as conn:
+              colleges = conn.execute('SELECT COUNT(*) FROM colleges').fetchone()[0]
+              records = conn.execute('SELECT COUNT(*) FROM admission_scores').fetchone()[0]
+              lines = conn.execute('SELECT COUNT(*) FROM province_lines').fetchone()[0]
+              ranks = conn.execute('SELECT COUNT(*) FROM score_rank_table').fetchone()[0]
+              print(f'📊 数据库统计:')
+              print(f'   院校: {colleges} 所')
+              print(f'   录取记录: {records} 条')
+              print(f'   省控线: {lines} 条')
+              print(f'   一分一段: {ranks} 条')
+              
+              # 检查最新年份
+              latest = conn.execute('SELECT MAX(year) FROM admission_scores').fetchone()[0]
+              print(f'   最新数据年份: {latest}')
+          "
+
+      - name: 💾 保存数据库到 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gaokao-db-${{ github.run_number }}
+          path: data/gaokao.db
+          retention-days: 90
+
+      - name: 📝 提交数据更新
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 如果数据库有变化就提交
+          if [ -f data/gaokao.db ]; then
+            git add data/gaokao.db
+            git diff --cached --quiet || git commit -m "data: 自动更新 ${{ github.event.inputs.province || '河北' }} 高考数据 $(date +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: 📢 采集结果通知
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ 数据采集成功"
+          else
+            echo "❌ 数据采集失败，请检查日志"
+          fi

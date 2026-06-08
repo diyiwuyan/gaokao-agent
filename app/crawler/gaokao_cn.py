@@ -266,9 +266,15 @@ class GaokaoCrawler:
 
 # 便捷函数
 def run_full_crawl(province: str = "河北", years: list[int] = None):
-    """一键执行完整数据采集流程"""
+    """一键执行完整数据采集流程
+    
+    如果不指定年份，默认采集最近3年（含当年）。
+    例如 2025 年 6 月运行，默认采集 2023, 2024, 2025。
+    """
     if years is None:
-        years = [2022, 2023, 2024]
+        from datetime import date
+        current_year = date.today().year
+        years = [current_year - 2, current_year - 1, current_year]
 
     crawler = GaokaoCrawler()
     try:

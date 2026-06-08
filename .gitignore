@@ -22,8 +22,9 @@ ENV/
 # Environment variables
 .env
 
-# Database
-data/*.db
+# Database (local dev copies - the GitHub Actions will commit the official one)
+# Uncomment below to ignore local DB:
+# data/*.db
 data/*.sqlite
 
 # OS

@@ -97,12 +97,14 @@ def run_chat_mode():
 
 def run_crawl():
     """数据采集"""
+    from datetime import date
     from app.data.database import init_database
     from app.crawler.gaokao_cn import run_full_crawl
 
     # 解析参数
     province = "河北"
-    years = [2022, 2023, 2024]
+    current_year = date.today().year
+    years = [current_year - 2, current_year - 1, current_year]
 
     args = sys.argv[2:]
     i = 0
