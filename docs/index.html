@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高考志愿填报 AI Agent</title>
+    <meta name="description" content="基于 LangGraph ReAct 架构的智能高考志愿填报助手，AI Agent 自主推理调用8大工具，生成冲稳保方案">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --accent: #f59e0b;
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --text: #f1f5f9;
+            --text-dim: #94a3b8;
+            --border: #334155;
+            --gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(124, 58, 237, 0.1) 0%, transparent 40%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(1deg); }
+            66% { transform: translate(-20px, 20px) rotate(-1deg); }
+        }
+
+        .hero-content { position: relative; z-index: 1; max-width: 800px; }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(37, 99, 235, 0.15);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: #60a5fa;
+            margin-bottom: 2rem;
+        }
+
+        .hero-badge .dot {
+            width: 8px; height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #fff 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-desc {
+            font-size: 1.25rem;
+            color: var(--text-dim);
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.875rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.5);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #263348;
+            transform: translateY(-2px);
+        }
+
+        /* Architecture Section */
+        section { padding: 6rem 2rem; }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: var(--text-dim);
+            margin-bottom: 4rem;
+            font-size: 1.1rem;
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(37, 99, 235, 0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card p {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        /* Architecture Diagram */
+        .arch-section { background: #0c1222; }
+
+        .arch-diagram {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 3rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .arch-layer {
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .arch-layer:last-child { margin-bottom: 0; }
+
+        .layer-ui { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .layer-agent { background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.3); }
+        .layer-tools { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .layer-data { background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); }
+
+        .layer-label {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .layer-desc { color: var(--text-dim); font-size: 0.9rem; }
+
+        .arch-arrow {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 1.5rem;
+            margin: 0.5rem 0;
+        }
+
+        /* Tools Section */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        .tool-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+
+        .tool-item:hover {
+            border-color: var(--accent);
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .tool-item .icon { font-size: 1.8rem; }
+        .tool-item .name { font-weight: 600; }
+        .tool-item .desc { font-size: 0.8rem; color: var(--text-dim); }
+
+        /* Demo Section */
+        .demo-section { background: #0c1222; }
+
+        .demo-chat {
+            max-width: 700px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .demo-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .demo-header .avatar {
+            width: 36px; height: 36px;
+            background: var(--gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .demo-header .name { font-weight: 600; }
+        .demo-header .status { font-size: 0.8rem; color: #22c55e; }
+
+        .demo-messages { padding: 1.5rem; }
+
+        .msg {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .msg-user { justify-content: flex-end; }
+
+        .msg-bubble {
+            max-width: 80%;
+            padding: 0.875rem 1.25rem;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .msg-user .msg-bubble {
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-ai .msg-bubble {
+            background: #263348;
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-ai .msg-bubble .highlight {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        /* Tech Stack */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .tech-item {
+            text-align: center;
+            padding: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+        }
+
+        .tech-item .tech-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .tech-item .tech-role { color: var(--text-dim); font-size: 0.85rem; }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-dim);
+        }
+
+        footer a { color: #60a5fa; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        /* Quick Start */
+        .quickstart {
+            max-width: 700px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .quickstart-header {
+            padding: 1rem 1.5rem;
+            background: #0f1a2e;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quickstart pre {
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .quickstart .comment { color: #6b7280; }
+        .quickstart .cmd { color: #22c55e; }
+        .quickstart .flag { color: #60a5fa; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-buttons { flex-direction: column; align-items: center; }
+            .arch-diagram { padding: 1.5rem; }
+            section { padding: 4rem 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                LangGraph ReAct Agent 架构
+            </div>
+            <h1>高考志愿填报 AI Agent</h1>
+            <p class="hero-desc">
+                AI 自主推理 × 8大专业工具 × 位次法精准预测<br>
+                为每一位考生生成个性化的「冲-稳-保」方案
+            </p>
+            <div class="hero-buttons">
+                <a href="https://github.com/diyiwuyan/gaokao-agent" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub 源码
+                </a>
+                <a href="#quickstart" class="btn btn-secondary">
+                    🚀 快速开始
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section>
+        <div class="container">
+            <h2 class="section-title">为什么选择 AI Agent？</h2>
+            <p class="section-subtitle">不是简单的查分系统，而是真正能"思考"的志愿规划师</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🧠</div>
+                    <h3>自主推理决策</h3>
+                    <p>基于 ReAct 循环，Agent 能理解你的需求，自主决定调用哪些工具、分析哪些数据，而不是死板的问答流程。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>位次法精准预测</h3>
+                    <p>利用一分一段表做位次映射，比单纯对比分数更科学。历年数据交叉验证，概率评估更可靠。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>冲稳保全方案</h3>
+                    <p>自动生成三档梯度志愿方案，精确到每个专业的录取概率和建议顺序，告别盲目填报。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3>多轮对话记忆</h3>
+                    <p>支持连续追问和条件调整。"换个城市呢？""我不想学医怎么办？"——Agent 记住上下文，灵活应变。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📜</div>
+                    <h3>政策智能解读</h3>
+                    <p>内置平行志愿、新高考选科、退档风险等政策知识库，让考生和家长不再迷糊。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔌</div>
+                    <h3>数据实时可扩展</h3>
+                    <p>对接掌上高考 API，支持爬取最新录取数据。数据每年更新，方案永不过时。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture -->
+    <section class="arch-section">
+        <div class="container">
+            <h2 class="section-title">系统架构</h2>
+            <p class="section-subtitle">LangGraph ReAct 循环 — Agent 自主推理、执行、观察</p>
+            <div class="arch-diagram">
+                <div class="arch-layer layer-ui">
+                    <div class="layer-label">🖥️ 用户界面层</div>
+                    <div class="layer-desc">Gradio Web UI &nbsp;|&nbsp; CLI 命令行 &nbsp;|&nbsp; FastAPI REST API</div>
+                </div>
+                <div class="arch-arrow">▼</div>
+                <div class="arch-layer layer-agent">
+                    <div class="layer-label">🤖 LangGraph ReAct Agent</div>
+                    <div class="layer-desc">Reason (思考) → Act (执行工具) → Observe (观察结果) → 循环直到满意</div>
+                </div>
+                <div class="arch-arrow">▼</div>
+                <div class="arch-layer layer-tools">
+                    <div class="layer-label">🔧 工具层 (8 Tools)</div>
+                    <div class="layer-desc">分数分析 | 院校搜索 | 录取查询 | 概率计算 | 专业推荐 | 院校对比 | 政策解读 | 策略建议</div>
+                </div>
+                <div class="arch-arrow">▼</div>
+                <div class="arch-layer layer-data">
+                    <div class="layer-label">💾 数据层</div>
+                    <div class="layer-desc">SQLite 数据库 &nbsp;|&nbsp; 掌上高考 API &nbsp;|&nbsp; 内置政策知识库</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8 Tools -->
+    <section>
+        <div class="container">
+            <h2 class="section-title">8 大智能工具</h2>
+            <p class="section-subtitle">Agent 根据对话上下文，自动选择最合适的工具组合</p>
+            <div class="tools-grid">
+                <div class="tool-item">
+                    <div class="icon">📊</div>
+                    <div><div class="name">分数分析</div><div class="desc">分数→位次转换 + 批次线比较</div></div>
+                </div>
+                <div class="tool-item">
+                    <div class="icon">🏫</div>
+                    <div><div class="name">院校搜索</div><div class="desc">多维度筛选 985/211/双一流</div></div>
+                </div>
+                <div class="tool-item">
+                    <div class="icon">📋</div>
+                    <div><div class="name">录取查询</div><div class="desc">历年录取线 + 位次趋势</div></div>
+                </div>
+                <div class="tool-item">
+                    <div class="icon">🎯</div>
+                    <div><div class="name">概率计算</div><div class="desc">位次法三年加权概率评估</div></div>
+                </div>
+                <div class="tool-item">
+                    <div class="icon">🎓</div>
+                    <div><div class="name">专业推荐</div><div class="desc">兴趣匹配 + 就业前景分析</div></div>
+                </div>
+                <div class="tool-item">
+                    <div class="icon">⚖️</div>
+                    <div><div class="name">院校对比</div><div class="desc">多维雷达图 + 综合打分</div></div>
+                </div>
+                <div class="tool-item">
+                    <div class="icon">📜</div>
+                    <div><div class="name">政策解读</div><div class="desc">平行志愿/选科/退档规则</div></div>
+                </div>
+                <div class="tool-item">
+                    <div class="icon">📝</div>
+                    <div><div class="name">策略建议</div><div class="desc">冲稳保三档完整方案</div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo -->
+    <section class="demo-section">
+        <div class="container">
+            <h2 class="section-title">对话演示</h2>
+            <p class="section-subtitle">像和真人咨询师聊天一样，自然地提出你的诉求</p>
+            <div class="demo-chat">
+                <div class="demo-header">
+                    <div class="avatar">🎓</div>
+                    <div>
+                        <div class="name">志愿哥</div>
+                        <div class="status">● 在线</div>
+                    </div>
+                </div>
+                <div class="demo-messages">
+                    <div class="msg msg-user">
+                        <div class="msg-bubble">我是河北物理类考生，考了650分，想学计算机相关，北京上海优先</div>
+                    </div>
+                    <div class="msg msg-ai">
+                        <div class="msg-bubble">
+                            好的，让我帮你分析一下！<br><br>
+                            📊 你的 <span class="highlight">650分</span> 在河北物理类对应 <span class="highlight">位次约1800名</span>，超本科线178分，属于强竞争力档位。<br><br>
+                            根据你的意向，我为你生成冲稳保方案：<br><br>
+                            🔴 <span class="highlight">冲刺档</span>: 浙大CS、南大AI、北航CS<br>
+                            🟡 <span class="highlight">稳妥档</span>: 哈工大、武大、华科、电子科大<br>
+                            🟢 <span class="highlight">保底档</span>: 北邮CS、北邮通信<br><br>
+                            需要我详细分析某所学校的录取概率吗？
+                        </div>
+                    </div>
+                    <div class="msg msg-user">
+                        <div class="msg-bubble">帮我算一下哈工大计算机的录取概率</div>
+                    </div>
+                    <div class="msg msg-ai">
+                        <div class="msg-bubble">
+                            🎯 哈工大·计算机类录取概率分析：<br><br>
+                            近3年录取位次: 1700 → 1600 → <span class="highlight">1500</span>（逐年走高）<br>
+                            你的位次: 1800<br><br>
+                            综合概率: <span class="highlight">约9%</span> — 属于冲刺档<br><br>
+                            💡 建议：可以放在志愿前列作为冲刺，但不要过度依赖。哈工大的机械类（位次2200）会是更稳妥的选择。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start -->
+    <section id="quickstart">
+        <div class="container">
+            <h2 class="section-title">快速开始</h2>
+            <p class="section-subtitle">3 分钟跑起来，开始和 AI 志愿师对话</p>
+            <div class="quickstart">
+                <div class="quickstart-header">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="6" fill="#ff5f57"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="6" fill="#febc2e"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="6" fill="#28c840"/></svg>
+                    &nbsp; Terminal
+                </div>
+                <pre><span class="comment"># 克隆项目</span>
+<span class="cmd">git clone</span> https://github.com/diyiwuyan/gaokao-agent.git
+<span class="cmd">cd</span> gaokao-agent
+
+<span class="comment"># 安装依赖</span>
+<span class="cmd">python</span> <span class="flag">-m</span> venv .venv && <span class="cmd">source</span> .venv/bin/activate
+<span class="cmd">pip</span> install <span class="flag">-e</span> .
+
+<span class="comment"># 配置 API Key</span>
+<span class="cmd">cp</span> .env.example .env
+<span class="comment"># 编辑 .env 填入 LLM API Key (DeepSeek/智谱/Moonshot等)</span>
+
+<span class="comment"># 初始化数据 & 启动</span>
+<span class="cmd">python</span> main.py init-db
+<span class="cmd">python</span> scripts/seed_demo_data.py  <span class="comment"># 灌入演示数据</span>
+<span class="cmd">python</span> main.py ui                 <span class="comment"># 🚀 启动 Web 界面</span></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack -->
+    <section class="arch-section">
+        <div class="container">
+            <h2 class="section-title">技术栈</h2>
+            <p class="section-subtitle">前沿 AI Agent 架构 + 生产级工程实践</p>
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <div class="tech-name">LangGraph</div>
+                    <div class="tech-role">Agent 编排</div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-name">LangChain</div>
+                    <div class="tech-role">工具 & LLM 接入</div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-name">FastAPI</div>
+                    <div class="tech-role">REST API</div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-name">Gradio</div>
+                    <div class="tech-role">Web 界面</div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-name">SQLite</div>
+                    <div class="tech-role">本地数据库</div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-name">DeepSeek</div>
+                    <div class="tech-role">LLM 推理</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>
+            MIT License · Made with ❤️ · 
+            <a href="https://github.com/diyiwuyan/gaokao-agent">GitHub</a>
+        </p>
+        <p style="margin-top: 0.5rem; font-size: 0.85rem;">
+            数据来源: <a href="https://www.gaokao.cn" target="_blank">掌上高考</a> · 
+            仅供参考，填报志愿请以官方数据为准
+        </p>
+    </footer>
+</body>
+</html>
