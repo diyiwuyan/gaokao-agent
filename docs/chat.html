@@ -62,7 +62,12 @@
         }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
 
-        .header-right a {
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .header-right a, .header-right button {
             color: var(--text-dim);
             text-decoration: none;
             font-size: 0.85rem;
@@ -70,8 +75,33 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             transition: all 0.2s;
+            background: transparent;
+            cursor: pointer;
         }
-        .header-right a:hover { border-color: var(--primary); color: var(--primary); }
+        .header-right a:hover, .header-right button:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* Mode Toggle */
+        .mode-toggle {
+            display: flex;
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 2px;
+            border: 1px solid var(--border);
+        }
+        .mode-btn {
+            padding: 0.35rem 0.75rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: transparent;
+            color: var(--text-dim);
+        }
+        .mode-btn.active {
+            background: var(--primary);
+            color: white;
+        }
 
         /* Messages */
         .messages {
@@ -207,6 +237,69 @@
             margin-top: 0.5rem;
         }
 
+        /* ============ 结构化表单模式 ============ */
+        .form-panel {
+            display: none;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+        .form-panel.active { display: block; }
+        .form-inner {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+        .form-group label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+        .form-group select,
+        .form-group input {
+            padding: 0.6rem 0.8rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group select:focus,
+        .form-group input:focus { border-color: var(--primary); }
+
+        .form-extra {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+        .form-extra .form-group { flex: 1; }
+        .form-submit-btn {
+            padding: 0.6rem 1.5rem;
+            background: var(--gradient);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .form-submit-btn:hover { transform: scale(1.02); box-shadow: 0 4px 15px rgba(37,99,235,0.4); }
+        .form-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
         /* Settings Modal */
         .modal-overlay {
             display: none;
@@ -255,6 +348,7 @@
             .msg { max-width: 95%; }
             .messages { padding: 1rem; }
             .quick-asks { flex-direction: column; align-items: center; }
+            .form-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
@@ -269,8 +363,12 @@
             </div>
         </div>
         <div class="header-right">
-            <a href="#" onclick="showSettings()">⚙️ 设置</a>
-            <a href="./" style="margin-left:0.5rem">← 首页</a>
+            <div class="mode-toggle">
+                <button class="mode-btn active" id="modeFree" onclick="switchMode('free')">💬 自由对话</button>
+                <button class="mode-btn" id="modeForm" onclick="switchMode('form')">📋 智能填报</button>
+            </div>
+            <a href="#" onclick="showSettings()">⚙️</a>
+            <a href="./">← 首页</a>
         </div>
     </div>
 
@@ -280,7 +378,7 @@
             <h2>👋 你好，我是志愿哥</h2>
             <p>我是基于 AI Agent 的高考志愿填报助手，数据覆盖全国 2868 所院校。<br>告诉我你的分数、省份和意向，我来帮你分析！</p>
             <div class="quick-asks">
-                <div class="quick-ask" onclick="quickAsk(this)">我是河北物理类，考了620分</div>
+                <div class="quick-ask" onclick="quickAsk(this)">我是山东考生，考了620分，物理类</div>
                 <div class="quick-ask" onclick="quickAsk(this)">帮我查一下浙江大学计算机的录取分</div>
                 <div class="quick-ask" onclick="quickAsk(this)">什么是平行志愿？</div>
                 <div class="quick-ask" onclick="quickAsk(this)">650分能上哪些985？</div>
@@ -288,13 +386,75 @@
         </div>
     </div>
 
-    <!-- Input -->
-    <div class="input-area">
+    <!-- 自由对话输入区 -->
+    <div class="input-area" id="freeInputArea">
         <div class="input-wrap">
-            <textarea id="input" placeholder="输入你的问题，例如：我是河北物理类考生，620分能上哪些学校？" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            <textarea id="input" placeholder="输入你的问题，例如：我是山东物理类考生，620分能上哪些学校？" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
         </div>
-        <div class="input-hint">按 Enter 发送，Shift+Enter 换行</div>
+        <div class="input-hint">按 Enter 发送，Shift+Enter 换行 · 切换到「智能填报」模式可快速结构化输入</div>
+    </div>
+
+    <!-- 结构化表单输入区 -->
+    <div class="form-panel" id="formPanel">
+        <div class="form-inner">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>📅 高考年份</label>
+                    <select id="formYear">
+                        <option value="2025" selected>2025年</option>
+                        <option value="2024">2024年</option>
+                        <option value="2023">2023年</option>
+                        <option value="2022">2022年</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📍 考生省份</label>
+                    <select id="formProvince">
+                        <option value="">请选择省份</option>
+                        <option>北京</option><option>天津</option><option>河北</option><option>山西</option>
+                        <option>内蒙古</option><option>辽宁</option><option>吉林</option><option>黑龙江</option>
+                        <option>上海</option><option>江苏</option><option>浙江</option><option>安徽</option>
+                        <option>福建</option><option>江西</option><option>山东</option><option>河南</option>
+                        <option>湖北</option><option>湖南</option><option>广东</option><option>广西</option>
+                        <option>海南</option><option>重庆</option><option>四川</option><option>贵州</option>
+                        <option>云南</option><option>西藏</option><option>陕西</option><option>甘肃</option>
+                        <option>青海</option><option>宁夏</option><option>新疆</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📝 科类</label>
+                    <select id="formCategory">
+                        <option value="物理类">物理类（理科）</option>
+                        <option value="历史类">历史类（文科）</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>🎯 高考分数</label>
+                    <input type="number" id="formScore" placeholder="如 620" min="100" max="750">
+                </div>
+                <div class="form-group">
+                    <label>📊 省排名/位次（选填）</label>
+                    <input type="number" id="formRank" placeholder="如 15000">
+                </div>
+                <div class="form-group">
+                    <label>💡 意向（选填）</label>
+                    <input type="text" id="formPreference" placeholder="如 计算机、留在省内">
+                </div>
+            </div>
+            <div class="form-extra">
+                <div class="form-group" style="flex:2">
+                    <label>🎯 填报目标</label>
+                    <select id="formGoal">
+                        <option value="冲稳保方案">生成冲-稳-保三档方案</option>
+                        <option value="概率分析">分析某校录取概率</option>
+                        <option value="院校推荐">推荐适合的院校</option>
+                        <option value="专业推荐">推荐适合的专业</option>
+                    </select>
+                </div>
+                <button class="form-submit-btn" id="formSubmitBtn" onclick="submitForm()">🚀 开始分析</button>
+            </div>
+        </div>
     </div>
 
     <!-- Settings Modal -->
@@ -316,12 +476,53 @@
 
     <script>
         // ============ 配置 ============
-        // Vercel 部署后的地址，部署完成后替换此处
         const DEFAULT_API = 'https://gaokao-agent.vercel.app';
 
         let API_URL = localStorage.getItem('gaokao_api_url') || DEFAULT_API;
-        let chatHistory = []; // [{role: 'user'|'assistant', content: '...'}]
+        let chatHistory = [];
         let isLoading = false;
+        let currentMode = 'free'; // 'free' | 'form'
+
+        // ============ 模式切换 ============
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('modeFree').classList.toggle('active', mode === 'free');
+            document.getElementById('modeForm').classList.toggle('active', mode === 'form');
+            document.getElementById('freeInputArea').style.display = mode === 'free' ? 'block' : 'none';
+            document.getElementById('formPanel').classList.toggle('active', mode === 'form');
+        }
+
+        // ============ 结构化表单提交 ============
+        function submitForm() {
+            const year = document.getElementById('formYear').value;
+            const province = document.getElementById('formProvince').value;
+            const category = document.getElementById('formCategory').value;
+            const score = document.getElementById('formScore').value;
+            const rank = document.getElementById('formRank').value;
+            const preference = document.getElementById('formPreference').value;
+            const goal = document.getElementById('formGoal').value;
+
+            // 校验必填项
+            if (!province) { alert('请选择省份'); return; }
+            if (!score) { alert('请输入高考分数'); return; }
+
+            // 组装结构化提问
+            let message = `【${year}年高考志愿填报咨询】\n`;
+            message += `📍 省份：${province}\n`;
+            message += `📝 科类：${category}\n`;
+            message += `🎯 分数：${score}分\n`;
+            if (rank) message += `📊 位次：${rank}\n`;
+            if (preference) message += `💡 意向偏好：${preference}\n`;
+            message += `\n请求：请帮我${goal}。`;
+            if (goal === '冲稳保方案') {
+                message += `请给出"冲"（录取概率20-40%）、"稳"（60-80%）、"保"（>90%）三档各3-5所院校，附上近年录取分数和位次数据。`;
+            }
+
+            // 通过对话发送
+            document.getElementById('input').value = message;
+            switchMode('free');
+            sendMessage();
+        }
 
         // ============ UI 工具函数 ============
         function autoResize(el) {
@@ -406,7 +607,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message,
-                        history: chatHistory.slice(0, -1), // 不含当前这条
+                        history: chatHistory.slice(0, -1),
                     }),
                 });
 
@@ -429,7 +630,6 @@
                     errMsg = '⚠️ 无法连接后端服务。可能原因：\n1. Vercel 冷启动中（等几秒再试）\n2. API 地址不正确（点右上角⚙️设置）\n3. 后端未部署到 Vercel';
                 }
                 addMessage(errMsg, 'ai');
-                // 移除失败的用户消息记录
                 chatHistory.pop();
             } finally {
                 isLoading = false;
