@@ -1,0 +1,7 @@
+name = "gaokao-agent-api"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+LLM_BASE_URL = "https://ark.cn-beijing.volces.com/api/coding/v3"
+LLM_MODEL = "ark-code-latest"

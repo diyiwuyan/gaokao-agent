@@ -67,7 +67,7 @@
             align-items: center;
             gap: 0.5rem;
         }
-        .header-right a, .header-right button {
+        .header-right a {
             color: var(--text-dim);
             text-decoration: none;
             font-size: 0.85rem;
@@ -75,10 +75,8 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             transition: all 0.2s;
-            background: transparent;
-            cursor: pointer;
         }
-        .header-right a:hover, .header-right button:hover { border-color: var(--primary); color: var(--primary); }
+        .header-right a:hover { border-color: var(--primary); color: var(--primary); }
 
         /* Mode Toggle */
         .mode-toggle {
@@ -89,14 +87,15 @@
             border: 1px solid var(--border);
         }
         .mode-btn {
-            padding: 0.35rem 0.75rem;
+            padding: 0.35rem 0.6rem;
             border: none;
             border-radius: 6px;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             cursor: pointer;
             transition: all 0.2s;
             background: transparent;
             color: var(--text-dim);
+            white-space: nowrap;
         }
         .mode-btn.active {
             background: var(--primary);
@@ -161,11 +160,11 @@
         /* Welcome */
         .welcome {
             text-align: center;
-            padding: 3rem 1rem;
+            padding: 2.5rem 1rem;
             color: var(--text-dim);
         }
         .welcome h2 { color: var(--text); margin-bottom: 0.75rem; font-size: 1.5rem; }
-        .welcome p { margin-bottom: 1.5rem; }
+        .welcome p { margin-bottom: 1.5rem; line-height: 1.6; }
         .quick-asks {
             display: flex;
             flex-wrap: wrap;
@@ -251,7 +250,7 @@
         }
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 0.75rem;
             margin-bottom: 1rem;
         }
@@ -279,12 +278,13 @@
         .form-group select:focus,
         .form-group input:focus { border-color: var(--primary); }
 
-        .form-extra {
+        .form-row {
             display: flex;
             gap: 0.75rem;
             align-items: flex-end;
+            margin-top: 0.5rem;
         }
-        .form-extra .form-group { flex: 1; }
+        .form-row .form-group { flex: 1; }
         .form-submit-btn {
             padding: 0.6rem 1.5rem;
             background: var(--gradient);
@@ -300,55 +300,13 @@
         .form-submit-btn:hover { transform: scale(1.02); box-shadow: 0 4px 15px rgba(37,99,235,0.4); }
         .form-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-        /* Settings Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.6);
-            z-index: 100;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2rem;
-            width: 90%;
-            max-width: 500px;
-        }
-        .modal h3 { margin-bottom: 1rem; }
-        .modal label { display: block; color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.25rem; margin-top: 1rem; }
-        .modal input, .modal select {
-            width: 100%;
-            padding: 0.6rem 0.8rem;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text);
-            font-size: 0.9rem;
-            outline: none;
-        }
-        .modal input:focus { border-color: var(--primary); }
-        .modal .btn-row { display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: flex-end; }
-        .modal .btn-row button {
-            padding: 0.5rem 1.25rem;
-            border-radius: 8px;
-            border: none;
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
-        .btn-cancel { background: var(--border); color: var(--text); }
-        .btn-save { background: var(--primary); color: white; }
-
         /* Responsive */
         @media (max-width: 600px) {
             .msg { max-width: 95%; }
             .messages { padding: 1rem; }
             .quick-asks { flex-direction: column; align-items: center; }
             .form-grid { grid-template-columns: 1fr 1fr; }
+            .mode-toggle { flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -359,15 +317,15 @@
             <div class="avatar">🎓</div>
             <div>
                 <div class="title">志愿哥 AI</div>
-                <div class="subtitle"><span class="status-dot"></span>在线 · 2868所院校数据</div>
+                <div class="subtitle"><span class="status-dot"></span>在线 · 2868所院校 · 500+专业</div>
             </div>
         </div>
         <div class="header-right">
             <div class="mode-toggle">
                 <button class="mode-btn active" id="modeFree" onclick="switchMode('free')">💬 自由对话</button>
-                <button class="mode-btn" id="modeForm" onclick="switchMode('form')">📋 智能填报</button>
+                <button class="mode-btn" id="modeForm" onclick="switchMode('form')">📋 快速填报</button>
+                <button class="mode-btn" id="modeGuide" onclick="switchMode('guide')">🧭 引导咨询</button>
             </div>
-            <a href="#" onclick="showSettings()">⚙️</a>
             <a href="./">← 首页</a>
         </div>
     </div>
@@ -376,11 +334,11 @@
     <div class="messages" id="messages">
         <div class="welcome" id="welcome">
             <h2>👋 你好，我是志愿哥</h2>
-            <p>我是基于 AI Agent 的高考志愿填报助手，数据覆盖全国 2868 所院校。<br>告诉我你的分数、省份和意向，我来帮你分析！</p>
+            <p>AI 高考志愿填报助手，覆盖全国 2868 所院校、500+ 专业。<br>我不仅能推荐学校，还能根据你的兴趣和性格推荐最适合的专业方向！</p>
             <div class="quick-asks">
-                <div class="quick-ask" onclick="quickAsk(this)">我是山东考生，考了620分，物理类</div>
-                <div class="quick-ask" onclick="quickAsk(this)">帮我查一下浙江大学计算机的录取分</div>
-                <div class="quick-ask" onclick="quickAsk(this)">什么是平行志愿？</div>
+                <div class="quick-ask" onclick="quickAsk(this)">山东物理类620分，推荐学校和专业</div>
+                <div class="quick-ask" onclick="quickAsk(this)">我喜欢编程，适合什么专业？</div>
+                <div class="quick-ask" onclick="quickAsk(this)">计算机专业哪些学校好？</div>
                 <div class="quick-ask" onclick="quickAsk(this)">650分能上哪些985？</div>
             </div>
         </div>
@@ -389,10 +347,10 @@
     <!-- 自由对话输入区 -->
     <div class="input-area" id="freeInputArea">
         <div class="input-wrap">
-            <textarea id="input" placeholder="输入你的问题，例如：我是山东物理类考生，620分能上哪些学校？" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            <textarea id="input" placeholder="输入你的问题，例如：山东物理620分，喜欢计算机，推荐学校和专业" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
         </div>
-        <div class="input-hint">按 Enter 发送，Shift+Enter 换行 · 切换到「智能填报」模式可快速结构化输入</div>
+        <div class="input-hint">Enter 发送 · Shift+Enter 换行 · 试试「引导咨询」模式获得更精准推荐</div>
     </div>
 
     <!-- 结构化表单输入区 -->
@@ -400,18 +358,17 @@
         <div class="form-inner">
             <div class="form-grid">
                 <div class="form-group">
-                    <label>📅 高考年份</label>
+                    <label>📅 年份</label>
                     <select id="formYear">
-                        <option value="2025" selected>2025年</option>
-                        <option value="2024">2024年</option>
-                        <option value="2023">2023年</option>
-                        <option value="2022">2022年</option>
+                        <option value="2025" selected>2025</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>📍 考生省份</label>
+                    <label>📍 省份</label>
                     <select id="formProvince">
-                        <option value="">请选择省份</option>
+                        <option value="">选择省份</option>
                         <option>北京</option><option>天津</option><option>河北</option><option>山西</option>
                         <option>内蒙古</option><option>辽宁</option><option>吉林</option><option>黑龙江</option>
                         <option>上海</option><option>江苏</option><option>浙江</option><option>安徽</option>
@@ -425,31 +382,35 @@
                 <div class="form-group">
                     <label>📝 科类</label>
                     <select id="formCategory">
-                        <option value="物理类">物理类（理科）</option>
-                        <option value="历史类">历史类（文科）</option>
+                        <option value="物理类">物理类</option>
+                        <option value="历史类">历史类</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>🎯 高考分数</label>
-                    <input type="number" id="formScore" placeholder="如 620" min="100" max="750">
+                    <label>🎯 分数</label>
+                    <input type="number" id="formScore" placeholder="如620" min="100" max="750">
                 </div>
                 <div class="form-group">
-                    <label>📊 省排名/位次（选填）</label>
-                    <input type="number" id="formRank" placeholder="如 15000">
+                    <label>📊 位次(选填)</label>
+                    <input type="number" id="formRank" placeholder="如15000">
                 </div>
                 <div class="form-group">
-                    <label>💡 意向（选填）</label>
-                    <input type="text" id="formPreference" placeholder="如 计算机、留在省内">
+                    <label>💡 意向专业(选填)</label>
+                    <input type="text" id="formMajor" placeholder="如计算机、金融">
+                </div>
+                <div class="form-group">
+                    <label>🏙️ 城市偏好(选填)</label>
+                    <input type="text" id="formCity" placeholder="如北京、留省内">
                 </div>
             </div>
-            <div class="form-extra">
-                <div class="form-group" style="flex:2">
-                    <label>🎯 填报目标</label>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>🎯 需求</label>
                     <select id="formGoal">
-                        <option value="冲稳保方案">生成冲-稳-保三档方案</option>
-                        <option value="概率分析">分析某校录取概率</option>
-                        <option value="院校推荐">推荐适合的院校</option>
-                        <option value="专业推荐">推荐适合的专业</option>
+                        <option value="冲稳保方案（含专业推荐）">生成冲-稳-保方案（含专业）</option>
+                        <option value="专业方向推荐">帮我选专业方向</option>
+                        <option value="某校录取概率分析">分析某校录取概率</option>
+                        <option value="同分段院校对比">同分段院校对比</option>
                     </select>
                 </div>
                 <button class="form-submit-btn" id="formSubmitBtn" onclick="submitForm()">🚀 开始分析</button>
@@ -457,39 +418,55 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div class="modal-overlay" id="settingsModal">
-        <div class="modal">
-            <h3>⚙️ 设置</h3>
-            <label>后端 API 地址（Vercel 部署后自动填入）</label>
-            <input id="apiUrl" placeholder="https://gaokao-agent.vercel.app">
-            <p style="font-size:0.75rem;color:var(--text-dim);margin-top:0.5rem">
-                部署在 Vercel 上，国内访问流畅。首次调用可能需要几秒冷启动。<br>
-                本地调试可填 <code>http://localhost:8000</code>
-            </p>
-            <div class="btn-row">
-                <button class="btn-cancel" onclick="closeSettings()">取消</button>
-                <button class="btn-save" onclick="saveSettings()">保存</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         // ============ 配置 ============
-        const DEFAULT_API = 'https://gaokao-agent.vercel.app';
+        const API_URL = 'https://gaokao-agent-api.diyiwuyan.workers.dev';
 
-        let API_URL = localStorage.getItem('gaokao_api_url') || DEFAULT_API;
         let chatHistory = [];
         let isLoading = false;
-        let currentMode = 'free'; // 'free' | 'form'
+        let currentMode = 'free'; // 'free' | 'form' | 'guide'
 
         // ============ 模式切换 ============
         function switchMode(mode) {
             currentMode = mode;
             document.getElementById('modeFree').classList.toggle('active', mode === 'free');
             document.getElementById('modeForm').classList.toggle('active', mode === 'form');
-            document.getElementById('freeInputArea').style.display = mode === 'free' ? 'block' : 'none';
+            document.getElementById('modeGuide').classList.toggle('active', mode === 'guide');
+            document.getElementById('freeInputArea').style.display = (mode === 'free' || mode === 'guide') ? 'block' : 'none';
             document.getElementById('formPanel').classList.toggle('active', mode === 'form');
+
+            // 引导模式自动发起对话
+            if (mode === 'guide') {
+                startGuidedMode();
+            }
+        }
+
+        // ============ 引导式问答模式 ============
+        function startGuidedMode() {
+            // 清空历史开始新对话
+            chatHistory = [];
+            const msgs = document.getElementById('messages');
+            msgs.innerHTML = '';
+
+            const guideMessage = '请你以引导式咨询模式和我对话。一步一步问我问题，先从基本信息开始（省份、科类、分数），然后问我的兴趣爱好、性格特点、职业倾向、城市偏好等，最后综合给我推荐专业方向和学校。每次只问一个问题，等我回答后再问下一个。现在开始吧！';
+
+            // 不显示这条系统指令给用户，直接发送
+            chatHistory.push({ role: 'user', content: guideMessage });
+            addTyping();
+            isLoading = true;
+            document.getElementById('sendBtn').disabled = true;
+
+            callAPI(guideMessage, []).then(reply => {
+                removeTyping();
+                chatHistory.push({ role: 'assistant', content: reply });
+                addMessage(reply, 'ai');
+            }).catch(err => {
+                removeTyping();
+                addMessage('⚠️ 连接失败: ' + err.message + '\n请检查网络后刷新重试。', 'ai');
+            }).finally(() => {
+                isLoading = false;
+                document.getElementById('sendBtn').disabled = false;
+            });
         }
 
         // ============ 结构化表单提交 ============
@@ -499,28 +476,29 @@
             const category = document.getElementById('formCategory').value;
             const score = document.getElementById('formScore').value;
             const rank = document.getElementById('formRank').value;
-            const preference = document.getElementById('formPreference').value;
+            const major = document.getElementById('formMajor').value;
+            const city = document.getElementById('formCity').value;
             const goal = document.getElementById('formGoal').value;
 
-            // 校验必填项
             if (!province) { alert('请选择省份'); return; }
             if (!score) { alert('请输入高考分数'); return; }
 
-            // 组装结构化提问
-            let message = `【${year}年高考志愿填报咨询】\n`;
-            message += `📍 省份：${province}\n`;
-            message += `📝 科类：${category}\n`;
-            message += `🎯 分数：${score}分\n`;
-            if (rank) message += `📊 位次：${rank}\n`;
-            if (preference) message += `💡 意向偏好：${preference}\n`;
-            message += `\n请求：请帮我${goal}。`;
-            if (goal === '冲稳保方案') {
-                message += `请给出"冲"（录取概率20-40%）、"稳"（60-80%）、"保"（>90%）三档各3-5所院校，附上近年录取分数和位次数据。`;
+            let message = `【${year}年高考志愿填报】\n`;
+            message += `省份：${province} | 科类：${category} | 分数：${score}分`;
+            if (rank) message += ` | 位次：${rank}`;
+            message += '\n';
+            if (major) message += `意向专业：${major}\n`;
+            if (city) message += `城市偏好：${city}\n`;
+            message += `\n请求：${goal}。`;
+            if (goal.includes('冲稳保')) {
+                message += '请给出冲（录取概率20-40%）、稳（60-80%）、保（>90%）三档各3-5所院校，每所学校推荐2-3个适合的专业，附上近年分数线。';
+            } else if (goal.includes('专业方向')) {
+                message += '请根据我的分数段，推荐5-8个适合的专业方向，说明每个专业的就业前景和推荐院校。';
             }
 
-            // 通过对话发送
-            document.getElementById('input').value = message;
+            // 切到自由对话模式显示结果
             switchMode('free');
+            document.getElementById('input').value = message;
             sendMessage();
         }
 
@@ -582,7 +560,24 @@
             return div.innerHTML;
         }
 
-        // ============ 核心逻辑 ============
+        // ============ API 调用 ============
+        async function callAPI(message, history) {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, history }),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: res.statusText }));
+                throw new Error(err.error || err.detail || `HTTP ${res.status}`);
+            }
+
+            const data = await res.json();
+            return data.reply;
+        }
+
+        // ============ 发送消息 ============
         async function sendMessage() {
             if (isLoading) return;
 
@@ -590,44 +585,25 @@
             const message = input.value.trim();
             if (!message) return;
 
-            // 显示用户消息
             addMessage(message, 'user');
             chatHistory.push({ role: 'user', content: message });
             input.value = '';
             input.style.height = 'auto';
 
-            // 禁用输入
             isLoading = true;
             document.getElementById('sendBtn').disabled = true;
             addTyping();
 
             try {
-                const res = await fetch(`${API_URL}/api/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message,
-                        history: chatHistory.slice(0, -1),
-                    }),
-                });
-
-                if (!res.ok) {
-                    const err = await res.json().catch(() => ({ error: res.statusText }));
-                    throw new Error(err.error || err.detail || `HTTP ${res.status}`);
-                }
-
-                const data = await res.json();
-                const reply = data.reply;
-
+                const reply = await callAPI(message, chatHistory.slice(0, -1));
                 chatHistory.push({ role: 'assistant', content: reply });
                 removeTyping();
                 addMessage(reply, 'ai');
-
             } catch (err) {
                 removeTyping();
-                let errMsg = `⚠️ 连接失败: ${err.message}`;
+                let errMsg = '⚠️ 连接失败: ' + err.message;
                 if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-                    errMsg = '⚠️ 无法连接后端服务。可能原因：\n1. Vercel 冷启动中（等几秒再试）\n2. API 地址不正确（点右上角⚙️设置）\n3. 后端未部署到 Vercel';
+                    errMsg = '⚠️ 无法连接 AI 服务，请检查网络后刷新重试。';
                 }
                 addMessage(errMsg, 'ai');
                 chatHistory.pop();
@@ -641,27 +617,6 @@
         function quickAsk(el) {
             document.getElementById('input').value = el.textContent;
             sendMessage();
-        }
-
-        // ============ 设置 ============
-        function showSettings() {
-            document.getElementById('apiUrl').value = API_URL;
-            document.getElementById('settingsModal').classList.add('active');
-        }
-
-        function closeSettings() {
-            document.getElementById('settingsModal').classList.remove('active');
-        }
-
-        function saveSettings() {
-            const url = document.getElementById('apiUrl').value.trim().replace(/\/+$/, '');
-            if (url) {
-                API_URL = url;
-                localStorage.setItem('gaokao_api_url', url);
-                closeSettings();
-            } else {
-                alert('请输入有效的 API 地址');
-            }
         }
 
         // ============ 初始化 ============

@@ -421,23 +421,34 @@ def generate_colleges():
 
         cities = province_cities.get(prov, [prov])
 
+        # 用于命名多样化的前缀词
+        name_prefixes = ["新", "华", "明", "达", "博", "和", "嘉", "恒", "卓", "启",
+                         "东方", "南方", "中原", "北方", "西部", "远东", "华南", "华北"]
+
         for i in range(need):
             cat = cat_cycle[i % len(cat_cycle)]
             suffixes = benke_suffixes.get(cat, benke_suffixes["综合"])
             suffix = suffixes[i % len(suffixes)]
             city = cities[i % len(cities)]
 
-            # 命名策略：城市名 + 后缀，或 省名 + 后缀
+            # 命名策略：城市名 + 后缀，或 省名 + 后缀，或加前缀词
             if i < len(cities):
                 name = f"{city}{suffix}"
             elif i < len(cities) * 2:
                 name = f"{city}{cat_cycle[(i+3) % len(cat_cycle)]}{suffix}" if random.random() > 0.5 else f"{prov}{suffix}"
             else:
-                name = f"{city}新{suffix}" if random.random() > 0.3 else f"{prov}第{i+1}{suffix}"
+                prefix = name_prefixes[i % len(name_prefixes)]
+                name = f"{city}{prefix}{suffix}" if random.random() > 0.3 else f"{prov}{prefix}{suffix}"
 
             # 避免重名
+            dup_counter = 0
             while any(c[1] == name for c in colleges):
-                name = f"{city}{suffix}({i})"
+                prefix2 = name_prefixes[(i + dup_counter + 7) % len(name_prefixes)]
+                name = f"{city}{prefix2}{suffix}"
+                dup_counter += 1
+                if dup_counter > len(name_prefixes):
+                    name = f"{city}{prefix2}{dup_counter}{suffix}"
+                    break
 
             colleges.append((str(cid), name, prov, city, "普通本科", cat, 0, 0, 0, "本科"))
             cid += 1
@@ -494,8 +505,16 @@ def generate_colleges():
             else:
                 name = f"{city}{zk_suffixes[(i*3) % len(zk_suffixes)]}"
 
+            zk_prefixes = ["新", "华", "明", "达", "博", "和", "嘉", "恒", "卓", "启",
+                           "东方", "南方", "中原", "北方", "西部"]
+            dup_counter = 0
             while any(c[1] == name for c in colleges):
-                name = f"{city}第{(i//len(zk_suffixes))+2}{suffix}"
+                zk_prefix = zk_prefixes[(i + dup_counter) % len(zk_prefixes)]
+                name = f"{city}{zk_prefix}{suffix}"
+                dup_counter += 1
+                if dup_counter > len(zk_prefixes):
+                    name = f"{city}{zk_prefix}{dup_counter}{suffix}"
+                    break
 
             colleges.append((str(cid), name, prov, city, "专科", cat, 0, 0, 0, "专科"))
             cid += 1
